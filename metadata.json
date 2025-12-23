@@ -1,0 +1,5 @@
+{
+  "name": "Cosca System",
+  "description": "A comprehensive, secure university enrollment system featuring dedicated portals for Registrars, Finance officers, and Students. Built with React, TypeScript, and Tailwind CSS.",
+  "requestFramePermissions": []
+}
