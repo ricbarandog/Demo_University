@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Card, Modal } from '../../components/Card';
@@ -5,18 +6,21 @@ import { Student, Transaction, EnrolledSubject } from '../../types';
 import { Search, UserPlus, CheckCircle, FileText, PieChart, Copy, Key, Hash, Mail, Trash2 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
-const generateFinancialSummary = async (student: Student) => {
+const generateFinancialSummary = async (student: Student): Promise<string> => {
    const prompt = `Analyze the financial status for student ${student.firstName} ${student.lastName}. Total Balance: ₱${student.balance}. Transaction count: ${student.transactions.length}. Brief summary only.`;
-   if (process.env.API_KEY) {
+   // Cast to any to prevent 'process' name errors in the browser environment
+   const apiKey = (process.env as any).API_KEY;
+   
+   if (apiKey) {
       try {
-          const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+          const ai = new GoogleGenAI({ apiKey });
           const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             contents: prompt,
           });
-          return response.text;
+          return response.text || "No analysis generated.";
       } catch (e) {
-          return "AI Analysis unavailable.";
+          return "AI Analysis unavailable due to technical error.";
       }
    }
    return "AI Analysis: Student has pending balance. Payment regularity is average. Recommend follow-up.";
@@ -68,16 +72,13 @@ export const StudentAccounts = () => {
     const [isBillingModalOpen, setBillingModalOpen] = useState(false);
     const [isAddStudentOpen, setAddStudentOpen] = useState(false);
     
-    // Add Student Form State
     const [newStudent, setNewStudent] = useState<Partial<Student>>({
         firstName: '', lastName: '', email: '', contactNumber: '', type: 'college', courseId: ''
     });
-    // Temporary state for filtering courses in the modal
     const [filterDept, setFilterDept] = useState('');
     
     const [createdCredentials, setCreatedCredentials] = useState<{name: string, password: string, id: string, email: string} | null>(null);
 
-    // Transaction Form State
     const [txForm, setTxForm] = useState<Partial<Transaction>>({ amount: 0, description: '', type: 'payment' });
     
     const [aiSummary, setAiSummary] = useState('');
@@ -156,14 +157,14 @@ export const StudentAccounts = () => {
 
         const student: Student = {
             id: generatedId,
-            firstName: newStudent.firstName!,
-            lastName: newStudent.lastName!,
-            email: newStudent.email!,
-            contactNumber: newStudent.contactNumber!,
+            firstName: newStudent.firstName || '',
+            lastName: newStudent.lastName || '',
+            email: newStudent.email || '',
+            contactNumber: newStudent.contactNumber || '',
             password: autoPassword,
             isPasswordChanged: false,
-            type: newStudent.type as 'college' | 'highschool',
-            courseId: newStudent.courseId!,
+            type: (newStudent.type as 'college' | 'highschool') || 'college',
+            courseId: newStudent.courseId || '',
             yearLevel: 1,
             enrollmentStatus: 'pending',
             balance: totalAssessment,
@@ -203,7 +204,7 @@ export const StudentAccounts = () => {
             id: txId,
             date: new Date().toISOString().split('T')[0],
             amount: Number(txForm.amount),
-            type: txForm.type as any,
+            type: (txForm.type as any) || 'payment',
             description: txForm.description || '',
             recordedBy: 'finance_staff',
             status: 'posted'
@@ -218,7 +219,7 @@ export const StudentAccounts = () => {
         if (!student) return;
         setLoadingAi(true);
         const summary = await generateFinancialSummary(student);
-        setAiSummary(summary);
+        setAiSummary(summary || "Analysis returned empty.");
         setLoadingAi(false);
     };
     
@@ -241,7 +242,6 @@ export const StudentAccounts = () => {
         setFilterDept('');
     }
 
-    // Filter courses based on type AND selected department
     const availableCourses = courses.filter(c => 
         c.type === newStudent.type && 
         (!filterDept || c.department === filterDept)
@@ -354,7 +354,7 @@ export const StudentAccounts = () => {
                                 <select className="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white" 
                                     value={filterDept} onChange={e => {
                                         setFilterDept(e.target.value);
-                                        setNewStudent({...newStudent, courseId: ''}); // Reset course when dept changes
+                                        setNewStudent({...newStudent, courseId: ''}); 
                                     }}>
                                         <option value="">-- All Departments --</option>
                                         {config.departments.map(dept => (
@@ -496,7 +496,7 @@ export const StudentAccounts = () => {
                                         placeholder="Amount"
                                         className="p-2 border rounded-lg text-sm"
                                         value={txForm.amount || ''}
-                                        onChange={(e) => setTxForm({...txForm, amount: parseFloat(e.target.value)})}
+                                        onChange={(e) => setTxForm({...txForm, amount: parseFloat(e.target.value) || 0})}
                                         required
                                     />
                                 </div>

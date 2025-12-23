@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { LogOut, LayoutDashboard, Users, CreditCard, FileText, Menu, X, GraduationCap, BookOpen, Settings, ShieldAlert, School, List } from 'lucide-react';
-import { User, Student } from '../types';
+import { User, Student, Role } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,7 +15,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate
   const [isSidebarOpen, setSidebarOpen] = React.useState(false);
 
   const getMenuItems = () => {
-    switch (user?.role) {
+    if (!user || !user.role) return [];
+    
+    switch (user.role) {
       case 'finance':
         return [
           { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -49,12 +52,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate
   };
 
   const displayName = React.useMemo(() => {
-    if (!user) return '';
+    if (!user) return 'Guest';
     if ('firstName' in user) {
         return `${(user as Student).firstName} ${(user as Student).lastName}`;
     }
     return (user as User).name;
   }, [user]);
+
+  const userRoleDisplay = user?.role ? user.role.replace('_', ' ') : 'Guest';
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
@@ -86,7 +91,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             <div className="px-2 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                {user?.role.replace('_', ' ')} Portal
+                {userRoleDisplay} Portal
             </div>
             {getMenuItems().map((item) => (
                 <button
@@ -115,7 +120,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activePage, onNavigate
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{displayName}</p>
-                    <p className="text-xs text-gray-500 truncate capitalize">{user?.role.replace('_', ' ')}</p>
+                    <p className="text-xs text-gray-500 truncate capitalize">{userRoleDisplay}</p>
                 </div>
             </div>
             <button 

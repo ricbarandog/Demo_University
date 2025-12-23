@@ -1,6 +1,7 @@
-import { Student, User, Transaction, EnrollmentDocument, Course, Subject, PasswordRequest, SystemConfig } from '../types';
 
-// Initial Static Data (Moved inside class to be mutable)
+import { Student, User, Transaction, EnrollmentDocument, Course, Subject, PasswordRequest, SystemConfig, Role } from '../types';
+
+// Initial Static Data
 const INITIAL_COURSES: Course[] = [
     {
         id: 'BSCS',
@@ -135,7 +136,7 @@ class MockDatabase {
   private config: SystemConfig;
 
   constructor() {
-    const storedStudents = localStorage.getItem('crimson_students');
+    const storedStudents = typeof window !== 'undefined' ? localStorage.getItem('crimson_students') : null;
     this.students = storedStudents ? JSON.parse(storedStudents) : INITIAL_STUDENTS;
     this.users = [...INITIAL_USERS]; 
     this.courses = INITIAL_COURSES;
@@ -148,7 +149,9 @@ class MockDatabase {
   }
 
   private save() {
-    localStorage.setItem('crimson_students', JSON.stringify(this.students));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('crimson_students', JSON.stringify(this.students));
+    }
   }
 
   private calculateBalance(transactions: Transaction[]): number {
@@ -172,12 +175,25 @@ class MockDatabase {
     
     if (studentUser) {
         if (password && studentUser.password !== password) return null;
+        // Construct the session object without spreading to avoid duplicate property errors
         return {
             id: studentUser.id,
+            firstName: studentUser.firstName,
+            lastName: studentUser.lastName,
+            email: studentUser.email,
+            contactNumber: studentUser.contactNumber,
+            type: studentUser.type,
+            courseId: studentUser.courseId,
+            yearLevel: studentUser.yearLevel,
+            enrollmentStatus: studentUser.enrollmentStatus,
+            balance: studentUser.balance,
+            transactions: studentUser.transactions,
+            academicRecords: studentUser.academicRecords,
+            documents: studentUser.documents,
+            isPasswordChanged: studentUser.isPasswordChanged,
             username: studentUser.firstName,
-            role: 'student',
+            role: 'student' as Role,
             name: `${studentUser.firstName} ${studentUser.lastName}`,
-            ...studentUser 
         };
     }
     return null;
@@ -285,7 +301,6 @@ class MockDatabase {
     return this.students[index];
   }
 
-  // --- USER MANAGEMENT ---
   async getUsers(): Promise<User[]> {
       await delay(300);
       return [...this.users];
@@ -304,7 +319,6 @@ class MockDatabase {
       }
   }
 
-  // --- CONFIG MANAGEMENT ---
   async getSystemConfig(): Promise<SystemConfig> {
       return this.config;
   }
@@ -326,7 +340,6 @@ class MockDatabase {
       }
   }
 
-  // --- REQUESTS ---
   async createPasswordRequest(email: string, userType: 'student' | 'staff'): Promise<void> {
       this.passwordRequests.push({
           id: Date.now().toString(),
@@ -342,7 +355,6 @@ class MockDatabase {
       const index = this.passwordRequests.findIndex(r => r.id === requestId);
       if (index !== -1) {
           this.passwordRequests[index].status = 'resolved';
-          // Find student and update
           const sIndex = this.students.findIndex(s => s.email === this.passwordRequests[index].email);
           if (sIndex !== -1) {
               this.students[sIndex].password = newPass;
